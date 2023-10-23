@@ -4,49 +4,52 @@ namespace IntervalSelector
 {
     public partial class IntervalSelectorControl
     {
+        private static readonly int SECONDS_IN_DAY = 86400;
+
+        double scale = 0.25d;       // Масштаб шкалы
+        double position = 0;        // Позиция масштабируемой зоны
+        int graduations_count;      // Общее кол-во нумеруемых градаций
+        int sub_graduations_count;  // Кол-во подградаций
+        double scaled_width;        // Ширина масштабируемой области
+
+        double graduation_width;                    // Ширина одной градации
+        double sub_graduation_width;                // Ширина одной подрадации
+        double text_rect_heigth;                    // Высота прямоугольника временных меток
+        double scaled_graduation_width;             // Ширина масштабированной градации
+        double first_visible_graduation_pos = 0d;   // Позиция на экране первой слева масштабированной градации
+        int visible_graduations_count;              // Кол-во градаций попавших в окно масштаба
+        int passed_graduations;                     // Кол-во градаций слева от текущей позиции масштабированного окна
+
         private void IntervalSelector_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            textRectHeigth = ActualHeight / 4;
+            text_rect_heigth = ActualHeight / 4;
+            CalcScaledWidth();
             GradStep = ActualWidth / graduations_count;
-            Position = _position == 0 ? 0 : e.NewSize.Width / (e.PreviousSize.Width / _position);
-            CalcFirstVisibleGraduationPos();
-            calcScaledWidth();
+            Position = position == 0 ? 0 : e.NewSize.Width / (e.PreviousSize.Width / position);
         }
 
-        double scaled_width;
-        private static readonly int SECONDS_IN_DAY = 86400;
-        double textRectHeigth;// = ActualHeight / 4;
-        private int SubGraduations;
-
-        private int PassedGraduations => Position == 0 ? 0 : (int)(Position / (ActualWidth / graduations_count)) + 1;
-
-        double firstVisibleGraduationPos = 0d;
-
-        int visibleGraduations = 0;
-
-        private void CalcFirstVisibleGraduationPos()
+        #region properties 
+        private int SubGraduations
         {
-            firstVisibleGraduationPos = _position > 0 ? ((ActualWidth - _position) % grad_step) / _scale : 0;
+            set
+            {
+                sub_graduations_count = value;
+                CalcSubGradWidth();
+            }
         }
 
-        private void CalculateVisibleGraduations()
-        {
-            visibleGraduations = (int)((ScaledEnd - _position) / grad_step);
-        }
-
-        double scaled_grad_size;
-        double grad_step;
         private double GradStep
         {
             set
             {
-                grad_step = value;
-                scaled_grad_size = value / Scale;
+                graduation_width = value;
+                scaled_graduation_width = value / scale;
+                CalcSubGradWidth();
                 CalcFirstVisibleGraduationPos();
-                CalculateVisibleGraduations();
+                CalcVisibleGraduationsCount();
             }
         }
-        int graduations_count;
+
         private int GraduationsCount
         {
             set
@@ -56,39 +59,90 @@ namespace IntervalSelector
             }
         }
 
-        private void CalculateGraduations()
+        public double Scale
         {
-            if (Scale < 0.0051d)
+            set
+            {
+                if (value < .005d || value > 1d) return;
+                scale = value;
+                CalcScaledWidth();
+
+                if (position + scaled_width > ActualWidth)
+                {
+                    position = ActualWidth - scaled_width;
+                    CalcFirstVisibleGraduationPos();
+                }
+
+                CalcGraduationsCount();
+                GradStep = ActualWidth / graduations_count;
+                scaled_graduation_width = graduation_width / value;
+                Render();
+            }
+        }
+
+        private double Position
+        {
+            get => position;
+            set
+            {
+                double maxPos = ActualWidth - scaled_width;
+                if (value < 0 || value > maxPos) return;
+                position = value;
+                CalcFirstVisibleGraduationPos();
+                passed_graduations = value == 0 ? 0 : (int)(value / (ActualWidth / graduations_count)) + 1; ;
+                Render();
+            }
+        }
+
+        public double ScaledEnd => Position + scaled_width;
+        #endregion properties 
+
+        #region calculators
+        private void CalcSubGradWidth() =>
+            sub_graduation_width = scaled_graduation_width / (sub_graduations_count + 1);
+
+        private void CalcFirstVisibleGraduationPos() =>
+            first_visible_graduation_pos = position > 0 ? ((ActualWidth - position) % graduation_width) / scale : 0;
+
+        private void CalcVisibleGraduationsCount() =>
+            visible_graduations_count = (int)((ScaledEnd - position) / graduation_width);
+
+        private void CalcScaledWidth() =>
+            scaled_width = ActualWidth * scale;
+
+        private void CalcGraduationsCount()
+        {
+            if (scale < 0.0051d)
             {
                 // каждые 1 минуy
                 GraduationsCount = 1440;
                 SubGraduations = 1;
             }
-            else if (Scale < 0.059d)
+            else if (scale < 0.059d)
             {
                 // каждые 5 минут
                 GraduationsCount = 288;
                 SubGraduations = 4;
             }
-            else if (Scale < 0.120d)
+            else if (scale < 0.120d)
             {
                 // каждые 10 минут
                 GraduationsCount = 144;
                 SubGraduations = 9;
             }
-            else if (Scale < 0.198d)
+            else if (scale < 0.198d)
             {
                 // Каждые 15 минут
                 GraduationsCount = 96;
                 SubGraduations = 2;
             }
-            else if (Scale < 0.302d)
+            else if (scale < 0.302d)
             {
                 // каждые пол часа
                 GraduationsCount = 48;
                 SubGraduations = 2;
             }
-            else if (Scale < 0.594d)
+            else if (scale < 0.594d)
             {
                 // каждый час
                 GraduationsCount = 24;
@@ -101,44 +155,6 @@ namespace IntervalSelector
             }
         }
 
-        private double _scale = 0.25d;
-        public double Scale
-        {
-            get => _scale;
-            set
-            {
-                if (value < .005d || value > 1d) return;
-                _scale = value;
-                calcScaledWidth();
-                if (Position + scaled_width > ActualWidth) /// TODO: cached maxPos
-                    Position = ActualWidth - scaled_width;
-
-                CalculateGraduations();
-                GradStep = ActualWidth / graduations_count;
-                scaled_grad_size = grad_step / _scale;
-                Render();
-            }
-        }
-
-        private double _position = 0;
-        private double Position
-        {
-            get => _position;
-            set
-            {
-                double maxPos = ActualWidth - scaled_width; /// TODO: cache
-                if (value < 0 || value > maxPos) return;
-                _position = value;
-                CalcFirstVisibleGraduationPos();
-                Render();
-            }
-        }
-        
-        private void calcScaledWidth()
-        {
-            scaled_width = ActualWidth * _scale;
-        }
-
-        public double ScaledEnd => Position + scaled_width;
+        #endregion calculators
     }
 }
