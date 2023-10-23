@@ -7,9 +7,6 @@ using System.Windows.Media;
 
 namespace IntervalSelector
 {
-    /// <summary>
-    /// Логика взаимодействия для IntervalSelector.xaml
-    /// </summary>
     public partial class IntervalSelectorControl : UserControl
     {
         private readonly Pen mainPen = new Pen(Brushes.Black, 1.0);
@@ -35,6 +32,7 @@ namespace IntervalSelector
             {
                 CalcScaledWidth();
                 CalcGraduationsCount();
+                GenerateRects();
                 Render();
             };
             InitializeComponent();
@@ -48,12 +46,19 @@ namespace IntervalSelector
             drawingContext.Close();
         }
 
+        private void GenerateRects()
+        {
+            double onequat = ActualHeight / 4;
+            textRect = new Rect(0, 0, ActualWidth, onequat);
+            scaleRect = new Rect(0, onequat, ActualWidth, onequat);
+            recordRect = new Rect(0, scaleRect.BottomLeft.Y, ActualWidth, onequat + onequat / 2);
+            previewRect = new Rect(0, recordRect.BottomLeft.Y, ActualWidth, onequat - onequat / 2);
+        }
+
         private void Render(DrawingContext dc)
         {
-            Rect textRect = new Rect(0, 0, ActualWidth, text_rect_heigth);
             dc.DrawRectangle(Brushes.Aqua, mainPen, textRect);
 
-            Rect scaleRect = new Rect(0, text_rect_heigth, ActualWidth, text_rect_heigth);
             dc.DrawRectangle(Brushes.Lime, mainPen, scaleRect);
 
             {
@@ -71,14 +76,18 @@ namespace IntervalSelector
                     time.sec = -1;
                     string timeString = TimeToString(time);
 
-                    var t = new FormattedText(
+                    var timestamp = new FormattedText(
                         timeString,
                         CultureInfo.CurrentCulture,
                         FlowDirection.LeftToRight,
                         tf, 10, Brushes.Black,
                         VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
-                    dc.DrawText(t, new Point(x - t.Width / 2, textRect.Bottom - t.Height - t.Height / 2));
+                    if (timestamp_half_width == 0d) timestamp_half_width = timestamp.Width / 2;
+                    if (timestamp_half_heigth == 0d) timestamp_half_heigth = timestamp.Height / 2;
+
+                    double tpos = textRect.Bottom - timestamp_half_heigth * 2;
+                    dc.DrawText(timestamp, new Point(x - timestamp_half_width, tpos));
 
                     for (int j = 1; j < sub_graduations_count + 1; j++)
                     {
@@ -90,11 +99,9 @@ namespace IntervalSelector
                 }
             }
 
-            Rect recordRect = new Rect(0, scaleRect.BottomLeft.Y, ActualWidth, ActualHeight / 3);
             dc.DrawRectangle(Brushes.Yellow, mainPen, recordRect);
 
             #region preview
-            Rect previewRect = new Rect(0, recordRect.BottomLeft.Y, ActualWidth, ActualHeight / 2 / 3);
             dc.DrawRectangle(Brushes.Lime, mainPen, previewRect);
 
             {
@@ -107,7 +114,7 @@ namespace IntervalSelector
                     dc.DrawLine(mainPen, new Point(x, previewRect.Y), new Point(x, ActualHeight));
                 }
 
-                dc.DrawRectangle(previewWindowBrush, mainPen, new Rect(Position, previewRect.Y, scaled_width, previewRect.Height));
+                dc.DrawRectangle(previewWindowBrush, mainPen, new Rect(position, previewRect.Y, scaled_width, previewRect.Height));
             }
             #endregion preview
         }

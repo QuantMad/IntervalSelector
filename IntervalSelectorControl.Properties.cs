@@ -14,15 +14,22 @@ namespace IntervalSelector
 
         double graduation_width;                    // Ширина одной градации
         double sub_graduation_width;                // Ширина одной подрадации
-        double text_rect_heigth;                    // Высота прямоугольника временных меток
         double scaled_graduation_width;             // Ширина масштабированной градации
         double first_visible_graduation_pos = 0d;   // Позиция на экране первой слева масштабированной градации
         int visible_graduations_count;              // Кол-во градаций попавших в окно масштаба
         int passed_graduations;                     // Кол-во градаций слева от текущей позиции масштабированного окна
+        double timestamp_half_width;                // Половина ширины текста временной метки
+        double timestamp_half_heigth;               // Половина высоты текста временной метки
+
+        // Квадраты для контента
+        Rect textRect;
+        Rect scaleRect;
+        Rect recordRect;
+        Rect previewRect;
 
         private void IntervalSelector_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            text_rect_heigth = ActualHeight / 4;
+            GenerateRects();
             CalcScaledWidth();
             GradStep = ActualWidth / graduations_count;
             Position = position == 0 ? 0 : e.NewSize.Width / (e.PreviousSize.Width / position);
