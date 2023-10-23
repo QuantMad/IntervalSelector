@@ -1,15 +1,8 @@
-﻿using System.ComponentModel;
-using System.Windows;
-
-namespace IntervalSelector
+﻿namespace IntervalSelector
 {
     public partial class IntervalSelectorControl
     {
         private static readonly int SECONDS_IN_DAY = 86400;
-
-        public delegate void IntervalSelectorEventHandler(IntervalSelectorControl sender, double oldVal, double newVal);
-        public event IntervalSelectorEventHandler OnScaleChanged;
-        public event IntervalSelectorEventHandler OnPositionChanged;
 
         private int SubGraduations;
 
@@ -19,7 +12,7 @@ namespace IntervalSelector
         double grad_step;
         private double GradStep
         {
-            get => grad_step;
+            //get => grad_step;
             set
             {
                 grad_step = value;
@@ -35,21 +28,6 @@ namespace IntervalSelector
                 graduations_count = value;
                 GradStep = ActualWidth / value;
             }
-        }
-
-        private void ScaleChanged(IntervalSelectorControl sender, double oldVal, double newVal)
-        {
-            if (Position + ScaledWidth > ActualWidth)
-                Position = ActualWidth - ScaledWidth;
-            
-            CalculateGraduations();
-            scaled_grad_size = grad_step / Scale;
-            Render();
-        }
-
-        private void PositionChanged(IntervalSelectorControl sender, double oldVal, double newVal)
-        {
-            Render();
         }
 
         private void CalculateGraduations()
@@ -97,63 +75,38 @@ namespace IntervalSelector
             }
         }
 
-        [Description("Текущий масштаб шкалы (0-1"), Category("Common Properties")]
+        private double _scale = 0.25d;
         public double Scale
         {
-            get => (double)GetValue(ScaleProperty);
-            set { if (value != 0) { SetValue(ScaleProperty, value); } }
-        }
-
-        //double position = 0;
-        private int ViewportPosition
-        {
-            get
-            {
-                return (int)(SECONDS_IN_DAY / (ActualWidth / Position));
-            }
+            get => _scale;
             set
             {
-                Position = ActualWidth / (SECONDS_IN_DAY / value);
-                //ViewportPosition = (int)(SECONDS_IN_DAY / (ActualWidth / position));
+                if (value < .005d || value > 1d) return;
+                _scale = value;
+
+                if (Position + ScaledWidth > ActualWidth) /// TODO: cached maxPos
+                    Position = ActualWidth - ScaledWidth;
+
+                CalculateGraduations();
+                GradStep = ActualWidth / GraduationsCount;
+                scaled_grad_size = grad_step / Scale;
+
+                Render();
             }
         }
-        [Description("Позиция интервала"), Category("Common Properties")]
+
+        private double _position = 0;
         private double Position
         {
-            get => (double)GetValue(PositionProperty);
-            set => SetValue(PositionProperty, value);
+            get => _position;
+            set
+            {
+                double maxPos = ActualWidth - ScaledWidth; /// TODO: cache
+                if (value < 0 || value > maxPos) return;
+                _position = value;
+                Render();
+            }
         }
-
-        public static readonly DependencyProperty ScaleProperty =
-            DependencyProperty.Register(nameof(Scale), typeof(double), typeof(IntervalSelectorControl),
-            new PropertyMetadata(0.25d,
-                (s, v) =>
-                {
-                    IntervalSelectorControl sender = (s as IntervalSelectorControl);
-                    sender.OnScaleChanged?.Invoke(sender, (double)v.OldValue, (double)v.NewValue);
-                },
-                (_, v) =>
-                {
-                    double val = (double)v;
-                    return val >= 1d ? 1d : val < .005d ? .005d : val;
-                }));
-
-        public static readonly DependencyProperty PositionProperty =
-            DependencyProperty.Register(nameof(Position), typeof(double), typeof(IntervalSelectorControl),
-            new PropertyMetadata(0d,
-                (s, v) =>
-                {
-                    IntervalSelectorControl sender = (s as IntervalSelectorControl);
-                    sender.OnPositionChanged?.Invoke(sender, (double)v.OldValue, (double)v.NewValue);
-                },
-                (s, v) =>
-                {
-                    IntervalSelectorControl sender = s as IntervalSelectorControl;
-                    double val = (double)v;
-                    double maxPos = sender.ActualWidth - sender.ScaledWidth;
-                    return val > maxPos ? maxPos : val <= 0d ? 0d : val;
-                }));
-
 
         public double ScaledWidth => ActualWidth * Scale;
 

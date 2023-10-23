@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -25,8 +26,8 @@ namespace IntervalSelector
             back.Freeze();
             backPen.Freeze();
             
-            OnScaleChanged += ScaleChanged;
-            OnPositionChanged += PositionChanged;
+            //OnScaleChanged += ScaleChanged;
+            //OnPositionChanged += PositionChanged;
             MouseMove += PreviewMouseMoveHandler;
             MouseWheel += MouseWheelHandler;
             SizeChanged += IntervalSelector_SizeChanged;
@@ -45,18 +46,18 @@ namespace IntervalSelector
 
         private void Render(DrawingContext dc)
         {
+            //Debug.WriteLine("render called");
             double heigthUnit = ActualHeight / 2;
-
-            Rect textRect = new Rect(0, 0, ActualWidth, heigthUnit / 2);
+            double textRectHeigth = ActualHeight / 4;
+            Rect textRect = new Rect(0, 0, ActualWidth, textRectHeigth);
             dc.DrawRectangle(Brushes.Aqua, mainPen, textRect);
 
-            Rect scaleRect = new Rect(0, heigthUnit / 2, ActualWidth, heigthUnit / 2);
+            Rect scaleRect = new Rect(0, textRectHeigth, ActualWidth, textRectHeigth);
             dc.DrawRectangle(Brushes.Lime, mainPen, scaleRect);
 
             {
                 dc.DrawLine(mainPen, scaleRect.BottomLeft, scaleRect.BottomRight);
 
-                //double gradStep = ActualWidth / GraduationsCount;
                 //double scaledGradSize = grad_step / Scale;
                 double extraX = Position > 0 ? ((ActualWidth - Position) % grad_step) / Scale : 0;
                 int visibleGraduations = (int)((ScaledEnd - Position) / grad_step);
@@ -162,9 +163,10 @@ namespace IntervalSelector
 
             if (e.MouseDevice.LeftButton == MouseButtonState.Pressed)
             {
+                
                 double delta = oldX - newX;
+                if (Math.Abs(delta) < 1) return;
                 Position += delta * Scale;
-               // Debug.WriteLine(SecondToTime(ViewportPosition));
             }
 
             oldX = newX;
@@ -177,8 +179,8 @@ namespace IntervalSelector
 
         private void IntervalSelector_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            Position = Position == 0 ? 0 : e.NewSize.Width / (e.PreviousSize.Width / Position);
             GradStep = ActualWidth / graduations_count;
+            Position = Position == 0 ? 0 : e.NewSize.Width / (e.PreviousSize.Width / Position);
         }
         #endregion interactivity
     }
