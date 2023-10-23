@@ -14,6 +14,7 @@ namespace IntervalSelector
     {
         private Pen mainPen = new Pen(Brushes.Black, 1.0);
         private Brush back = Brushes.Blue.Clone();
+        Brush previewWindowBrush = Brushes.Aqua.Clone();
         private Pen backPen = new Pen();
         private readonly Typeface tf = new Typeface("Lucida Console");
         private DrawingGroup backingStore = new DrawingGroup();
@@ -21,6 +22,8 @@ namespace IntervalSelector
         public IntervalSelectorControl()
         {
             back.Opacity = 0.1;
+            previewWindowBrush.Opacity = 0.5;
+            previewWindowBrush.Freeze();
             mainPen.Freeze();
             back.Freeze();
             backPen.Freeze();
@@ -74,6 +77,7 @@ namespace IntervalSelector
 
                     dc.DrawText(t, new Point(x - t.Width / 2, textRect.Bottom - t.Height - t.Height / 2));
 
+
                     for (int j = 1; j < SubGraduations + 1; j++)
                     {
                         double subX = x + scaled_grad_size / (SubGraduations + 1) * j;
@@ -101,9 +105,7 @@ namespace IntervalSelector
                     dc.DrawLine(mainPen, new Point(x, previewRect.Y), new Point(x, ActualHeight));
                 }
 
-                Brush b = Brushes.Aqua.Clone();
-                b.Opacity = 0.5;
-                dc.DrawRectangle(b, mainPen, new Rect(Position, previewRect.Y, scaled_width, previewRect.Height));
+                dc.DrawRectangle(previewWindowBrush, mainPen, new Rect(Position, previewRect.Y, scaled_width, previewRect.Height));
             }
             #endregion preview
         }
@@ -118,7 +120,7 @@ namespace IntervalSelector
         #region helpers
         private (int, int) CalculateTimeForGraduation(int graduationNumber)
         {
-            int totalSecond = SECONDS_IN_DAY / graduations_count * graduationNumber;
+            int totalSecond = graduationNumber > 0 ? SECONDS_IN_DAY / graduations_count * graduationNumber : 0;
             (int h, int m, _) = SecondToTime(totalSecond);
 
             return (h, m);
