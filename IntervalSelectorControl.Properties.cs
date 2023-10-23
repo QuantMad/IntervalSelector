@@ -1,28 +1,54 @@
-﻿namespace IntervalSelector
+﻿using System.Windows;
+
+namespace IntervalSelector
 {
     public partial class IntervalSelectorControl
     {
-        private static readonly int SECONDS_IN_DAY = 86400;
+        private void IntervalSelector_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            textRectHeigth = ActualHeight / 4;
+            GradStep = ActualWidth / graduations_count;
+            Position = _position == 0 ? 0 : e.NewSize.Width / (e.PreviousSize.Width / _position);
+            CalcFirstVisibleGraduationPos();
+            calcScaledWidth();
+        }
 
+        double scaled_width;
+        private static readonly int SECONDS_IN_DAY = 86400;
+        double textRectHeigth;// = ActualHeight / 4;
         private int SubGraduations;
 
-        private int PassedGraduations => Position == 0 ? 0 : (int)(Position / (ActualWidth / GraduationsCount)) + 1;
+        private int PassedGraduations => Position == 0 ? 0 : (int)(Position / (ActualWidth / graduations_count)) + 1;
+
+        double firstVisibleGraduationPos = 0d;
+
+        int visibleGraduations = 0;
+
+        private void CalcFirstVisibleGraduationPos()
+        {
+            firstVisibleGraduationPos = _position > 0 ? ((ActualWidth - _position) % grad_step) / _scale : 0;
+        }
+
+        private void CalculateVisibleGraduations()
+        {
+            visibleGraduations = (int)((ScaledEnd - _position) / grad_step);
+        }
 
         double scaled_grad_size;
         double grad_step;
         private double GradStep
         {
-            //get => grad_step;
             set
             {
                 grad_step = value;
                 scaled_grad_size = value / Scale;
+                CalcFirstVisibleGraduationPos();
+                CalculateVisibleGraduations();
             }
         }
         int graduations_count;
         private int GraduationsCount
         {
-            get => graduations_count;
             set
             {
                 graduations_count = value;
@@ -83,14 +109,13 @@
             {
                 if (value < .005d || value > 1d) return;
                 _scale = value;
-
-                if (Position + ScaledWidth > ActualWidth) /// TODO: cached maxPos
-                    Position = ActualWidth - ScaledWidth;
+                calcScaledWidth();
+                if (Position + scaled_width > ActualWidth) /// TODO: cached maxPos
+                    Position = ActualWidth - scaled_width;
 
                 CalculateGraduations();
-                GradStep = ActualWidth / GraduationsCount;
-                scaled_grad_size = grad_step / Scale;
-
+                GradStep = ActualWidth / graduations_count;
+                scaled_grad_size = grad_step / _scale;
                 Render();
             }
         }
@@ -101,15 +126,19 @@
             get => _position;
             set
             {
-                double maxPos = ActualWidth - ScaledWidth; /// TODO: cache
+                double maxPos = ActualWidth - scaled_width; /// TODO: cache
                 if (value < 0 || value > maxPos) return;
                 _position = value;
+                CalcFirstVisibleGraduationPos();
                 Render();
             }
         }
+        
+        private void calcScaledWidth()
+        {
+            scaled_width = ActualWidth * _scale;
+        }
 
-        public double ScaledWidth => ActualWidth * Scale;
-
-        public double ScaledEnd => Position + ScaledWidth;
+        public double ScaledEnd => Position + scaled_width;
     }
 }

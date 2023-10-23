@@ -1,6 +1,5 @@
-﻿using System;
-using System.Diagnostics;
-using System.Globalization;
+﻿using System.Globalization;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -25,15 +24,17 @@ namespace IntervalSelector
             mainPen.Freeze();
             back.Freeze();
             backPen.Freeze();
-            
-            //OnScaleChanged += ScaleChanged;
-            //OnPositionChanged += PositionChanged;
+
             MouseMove += PreviewMouseMoveHandler;
             MouseWheel += MouseWheelHandler;
             SizeChanged += IntervalSelector_SizeChanged;
-            Loaded += (s, a) => Render();
+            Loaded += (s, a) =>
+            {
+                calcScaledWidth();
+                CalculateGraduations();
+                Render();
+            };
             InitializeComponent();
-            CalculateGraduations();
         }
 
         #region render
@@ -46,9 +47,6 @@ namespace IntervalSelector
 
         private void Render(DrawingContext dc)
         {
-            //Debug.WriteLine("render called");
-            double heigthUnit = ActualHeight / 2;
-            double textRectHeigth = ActualHeight / 4;
             Rect textRect = new Rect(0, 0, ActualWidth, textRectHeigth);
             dc.DrawRectangle(Brushes.Aqua, mainPen, textRect);
 
@@ -58,13 +56,9 @@ namespace IntervalSelector
             {
                 dc.DrawLine(mainPen, scaleRect.BottomLeft, scaleRect.BottomRight);
 
-                //double scaledGradSize = grad_step / Scale;
-                double extraX = Position > 0 ? ((ActualWidth - Position) % grad_step) / Scale : 0;
-                int visibleGraduations = (int)((ScaledEnd - Position) / grad_step);
-
                 for (int i = -1; i < visibleGraduations + 1; i++)
                 {
-                    double x = extraX + scaled_grad_size * i;
+                    double x = firstVisibleGraduationPos + scaled_grad_size * i;
 
                     dc.DrawLine(mainPen, new Point(x, scaleRect.BottomLeft.Y), new Point(x, scaleRect.TopLeft.Y));
 
@@ -90,27 +84,26 @@ namespace IntervalSelector
                 }
             }
 
-            Rect recordRect = new Rect(0, scaleRect.BottomLeft.Y, ActualWidth, heigthUnit / 3 * 2);
+            Rect recordRect = new Rect(0, scaleRect.BottomLeft.Y, ActualWidth, ActualHeight / 3);
             dc.DrawRectangle(Brushes.Yellow, mainPen, recordRect);
 
             #region preview
-            Rect previewRect = new Rect(0, recordRect.BottomLeft.Y, ActualWidth, heigthUnit / 3);
+            Rect previewRect = new Rect(0, recordRect.BottomLeft.Y, ActualWidth, ActualHeight / 2 / 3);
             dc.DrawRectangle(Brushes.Lime, mainPen, previewRect);
 
             {
-                double infoY = previewRect.Y;
                 dc.DrawLine(mainPen, previewRect.BottomLeft, previewRect.BottomRight);
 
                 double x, w = (ActualWidth / 24);
                 for (int i = 0; i < 24; i++)
                 {
                     x = i * w;
-                    dc.DrawLine(mainPen, new Point(x, infoY), new Point(x, ActualHeight));
+                    dc.DrawLine(mainPen, new Point(x, previewRect.Y), new Point(x, ActualHeight));
                 }
 
                 Brush b = Brushes.Aqua.Clone();
                 b.Opacity = 0.5;
-                dc.DrawRectangle(b, mainPen, new Rect(Position, infoY, ActualWidth * Scale, previewRect.Height));
+                dc.DrawRectangle(b, mainPen, new Rect(Position, previewRect.Y, scaled_width, previewRect.Height));
             }
             #endregion preview
         }
@@ -125,11 +118,12 @@ namespace IntervalSelector
         #region helpers
         private (int, int) CalculateTimeForGraduation(int graduationNumber)
         {
-            int totalSecond = SECONDS_IN_DAY / GraduationsCount * graduationNumber;
+            int totalSecond = SECONDS_IN_DAY / graduations_count * graduationNumber;
             (int h, int m, _) = SecondToTime(totalSecond);
 
             return (h, m);
         }
+
 
         private (int, int, int) SecondToTime(int second)
         {
@@ -140,12 +134,17 @@ namespace IntervalSelector
             return (hour, min, sec);
         }
 
-        private static string TimeToString((int hour, int min) time)
+        readonly StringBuilder sb = new StringBuilder(5, 8);
+        private string TimeToString((int hour, int min) time)
         {
-            string hStr = time.hour < 10 ? $"0{time.hour}" : $"{time.hour}";
-            string mStr = time.min < 10 ? $"0{time.min}" : $"{time.min}";
+            sb.Clear();
+            if (time.hour < 10) sb.Append('0');
+            sb.Append(time.hour);
+            sb.Append(':');
+            if (time.min < 10) sb.Append('0');
+            sb.Append(time.min);
 
-            return $"{hStr}:{mStr}";
+            return sb.ToString();
         }
         #endregion helpers
 
@@ -163,10 +162,9 @@ namespace IntervalSelector
 
             if (e.MouseDevice.LeftButton == MouseButtonState.Pressed)
             {
-                
+
                 double delta = oldX - newX;
-                if (Math.Abs(delta) < 1) return;
-                Position += delta * Scale;
+                Position += delta * _scale;
             }
 
             oldX = newX;
@@ -174,14 +172,10 @@ namespace IntervalSelector
 
         private void MouseWheelHandler(object sender, MouseWheelEventArgs e)
         {
-            Scale += (e.Delta > 0d ? -(0.02d * Scale) : e.Delta < 0 ? 0.02d * Scale : 0);
+            Scale += (e.Delta > 0d ? -(0.02d * _scale) : e.Delta < 0 ? 0.02d * _scale : 0);
         }
 
-        private void IntervalSelector_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            GradStep = ActualWidth / graduations_count;
-            Position = Position == 0 ? 0 : e.NewSize.Width / (e.PreviousSize.Width / Position);
-        }
+
         #endregion interactivity
     }
 }
