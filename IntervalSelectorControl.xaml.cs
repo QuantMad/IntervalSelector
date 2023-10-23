@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -30,7 +31,7 @@ namespace IntervalSelector
             SizeChanged += IntervalSelector_SizeChanged;
             Loaded += (s, a) =>
             {
-                CalcScaledWidth();
+                CalcScaledWindowWidth();
                 CalcGraduationsCount();
                 GenerateRects();
                 Render();
@@ -44,15 +45,6 @@ namespace IntervalSelector
             var drawingContext = backingStore.Open();
             Render(drawingContext);
             drawingContext.Close();
-        }
-
-        private void GenerateRects()
-        {
-            double onequat = ActualHeight / 4;
-            textRect = new Rect(0, 0, ActualWidth, onequat);
-            scaleRect = new Rect(0, onequat, ActualWidth, onequat);
-            recordRect = new Rect(0, scaleRect.BottomLeft.Y, ActualWidth, onequat + onequat / 2);
-            previewRect = new Rect(0, recordRect.BottomLeft.Y, ActualWidth, onequat - onequat / 2);
         }
 
         private void Render(DrawingContext dc)
@@ -114,7 +106,7 @@ namespace IntervalSelector
                     dc.DrawLine(mainPen, new Point(x, previewRect.Y), new Point(x, ActualHeight));
                 }
 
-                dc.DrawRectangle(previewWindowBrush, mainPen, new Rect(position, previewRect.Y, scaled_width, previewRect.Height));
+                dc.DrawRectangle(previewWindowBrush, mainPen, new Rect(position, previewRect.Y, scaled_window_width, previewRect.Height));
             }
             #endregion preview
         }
@@ -169,8 +161,8 @@ namespace IntervalSelector
             }
 
             if (e.MouseDevice.LeftButton == MouseButtonState.Pressed)
-                Position += (oldX - newX) * scale;
-
+                Position = position + (oldX - newX) * scale;
+            Debug.WriteLine(position);
             oldX = newX;
         }
 
