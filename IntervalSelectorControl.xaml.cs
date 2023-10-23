@@ -21,11 +21,16 @@ namespace IntervalSelector
         public IntervalSelectorControl()
         {
             back.Opacity = 0.1;
+            mainPen.Freeze();
+            back.Freeze();
+            backPen.Freeze();
+            
             OnScaleChanged += ScaleChanged;
             OnPositionChanged += PositionChanged;
             MouseMove += PreviewMouseMoveHandler;
             MouseWheel += MouseWheelHandler;
             SizeChanged += IntervalSelector_SizeChanged;
+            Loaded += (s, a) => Render();
             InitializeComponent();
             CalculateGraduations();
         }
@@ -51,14 +56,14 @@ namespace IntervalSelector
             {
                 dc.DrawLine(mainPen, scaleRect.BottomLeft, scaleRect.BottomRight);
 
-                double gradStep = ActualWidth / GraduationsCount;
-                double scaledGradSize = gradStep / Scale;
-                double extraX = Position > 0 ? ((ActualWidth - Position) % gradStep) / Scale : 0;
-                int visibleGraduations = (int)((ScaledEnd - Position) / gradStep);
+                //double gradStep = ActualWidth / GraduationsCount;
+                //double scaledGradSize = grad_step / Scale;
+                double extraX = Position > 0 ? ((ActualWidth - Position) % grad_step) / Scale : 0;
+                int visibleGraduations = (int)((ScaledEnd - Position) / grad_step);
 
                 for (int i = -1; i < visibleGraduations + 1; i++)
                 {
-                    double x = extraX + scaledGradSize * i;
+                    double x = extraX + scaled_grad_size * i;
 
                     dc.DrawLine(mainPen, new Point(x, scaleRect.BottomLeft.Y), new Point(x, scaleRect.TopLeft.Y));
 
@@ -76,7 +81,7 @@ namespace IntervalSelector
 
                     for (int j = 1; j < SubGraduations + 1; j++)
                     {
-                        double subX = x + scaledGradSize / (SubGraduations + 1) * j;
+                        double subX = x + scaled_grad_size / (SubGraduations + 1) * j;
                         dc.DrawLine(mainPen,
                             new Point(subX, scaleRect.BottomLeft.Y),
                             new Point(subX, scaleRect.BottomLeft.Y - scaleRect.Height / 2));
@@ -112,7 +117,6 @@ namespace IntervalSelector
         protected override void OnRender(DrawingContext dc)
         {
             base.OnRender(dc);
-            Render();
             dc.DrawDrawing(backingStore);
         }
         #endregion render
@@ -160,7 +164,7 @@ namespace IntervalSelector
             {
                 double delta = oldX - newX;
                 Position += delta * Scale;
-                Debug.WriteLine(SecondToTime(ViewportPosition));
+               // Debug.WriteLine(SecondToTime(ViewportPosition));
             }
 
             oldX = newX;
@@ -174,6 +178,7 @@ namespace IntervalSelector
         private void IntervalSelector_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             Position = Position == 0 ? 0 : e.NewSize.Width / (e.PreviousSize.Width / Position);
+            GradStep = ActualWidth / graduations_count;
         }
         #endregion interactivity
     }

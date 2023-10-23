@@ -15,15 +15,35 @@ namespace IntervalSelector
 
         private int PassedGraduations => Position == 0 ? 0 : (int)(Position / (ActualWidth / GraduationsCount)) + 1;
 
-        private int GraduationsCount;
+        double scaled_grad_size;
+        double grad_step;
+        private double GradStep
+        {
+            get => grad_step;
+            set
+            {
+                grad_step = value;
+                scaled_grad_size = value / Scale;
+            }
+        }
+        int graduations_count;
+        private int GraduationsCount
+        {
+            get => graduations_count;
+            set
+            {
+                graduations_count = value;
+                GradStep = ActualWidth / value;
+            }
+        }
 
         private void ScaleChanged(IntervalSelectorControl sender, double oldVal, double newVal)
         {
             if (Position + ScaledWidth > ActualWidth)
                 Position = ActualWidth - ScaledWidth;
-
+            
             CalculateGraduations();
-
+            scaled_grad_size = grad_step / Scale;
             Render();
         }
 
